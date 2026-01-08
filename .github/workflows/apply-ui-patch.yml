@@ -37,14 +37,25 @@ jobs:
       - name: Debug patch head
         run: |
           echo "Patch head:"
-          head -n 60 patch.diff
-          echo "Patch files (grep ---/+++):"
-          grep -E "^(--- |\+\+\+ )" -n patch.diff | head -n 50
+          head -n 80 patch.diff
+          echo "Patch files (diff --git):"
+          grep -n '^diff --git ' patch.diff | head -n 50
+          echo "Patch files (---/+++):"
+          grep -E "^(--- |\+\+\+ )" -n patch.diff | head -n 80
+          echo "Patch size:"
+          wc -l patch.diff
 
-      - name: Apply patch (verbose)
+      - name: Sanitize patch
         shell: bash
         run: |
-          git apply --verbose --whitespace=nowarn patch.diff
+          # Remove problematic marker line if present
+          sed -i '/^\\ No newline at end of file$/d' patch.diff
+
+      - name: Apply patch (tolerant)
+        shell: bash
+        run: |
+          # Tolerant apply to reduce strict parsing failures
+          git apply --verbose --whitespace=nowarn --unidiff-zero patch.diff
 
       - name: Git status
         run: |
