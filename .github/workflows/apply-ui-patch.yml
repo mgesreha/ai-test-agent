@@ -79,9 +79,9 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ai/ui-patch
+          branch: ai/ui-patch-${{ github.run_id }}
           base: main
-          title: "AI: UI POM + Tests patch"
+          title: "AI: UI POM + Tests patch (run ${{ github.run_id }})"
           body: |
             This PR applies an AI-generated patch (base64-decoded) for UI automation:
             - Page Object Model updates
