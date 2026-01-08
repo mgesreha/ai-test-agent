@@ -27,7 +27,7 @@ jobs:
           git branch -a
           git rev-parse --abbrev-ref HEAD
 
-      - name: Write patch to file (from base64)
+      - name: Write patch to file (from base64) + sanitize
         shell: bash
         env:
           PATCH_B64: ${{ inputs.patchDiff_ui_b64 }}
@@ -45,6 +45,14 @@ jobs:
             echo >> patch.diff
           fi
 
+      - name: Upload patch.diff artifact (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: patch-diff
+          path: patch.diff
+          retention-days: 7
+
       - name: Debug patch overview
         shell: bash
         run: |
@@ -53,7 +61,7 @@ jobs:
           echo "Patch size (lines):"
           wc -l patch.diff
           echo "diff --git headers:"
-          grep -n '^diff --git ' patch.diff | head -n 20 || true
+          grep -n '^diff --git ' patch.diff | head -n 30 || true
           echo "File(1) info:"
           file patch.diff || true
 
