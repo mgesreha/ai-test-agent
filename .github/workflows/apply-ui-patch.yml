@@ -48,6 +48,12 @@ jobs:
           echo "File(1) info:"
           file patch.diff || true
 
+      - name: Remove leading indentation (fix patch formatting)
+        shell: bash
+        run: |
+          # Remove exactly two leading spaces from each line (common indentation issue)
+          sed -i 's/^  //' patch.diff
+
       - name: Sanitize patch (LF + newline + remove marker)
         shell: bash
         run: |
