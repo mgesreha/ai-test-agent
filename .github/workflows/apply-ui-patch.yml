@@ -15,12 +15,17 @@ permissions:
 jobs:
   apply_patch:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Show branch
+        run: |
+          echo "Ref: $GITHUB_REF"
+          git branch -a
+          git rev-parse --abbrev-ref HEAD
 
       - name: Write patch to file
         shell: bash
@@ -29,13 +34,22 @@ jobs:
           ${{ inputs.patchDiff_ui }}
           PATCH_EOF
 
-      - name: Apply patch
+      - name: Debug patch head
+        run: |
+          echo "Patch head:"
+          head -n 60 patch.diff
+          echo "Patch files (grep ---/+++):"
+          grep -E "^(--- |\+\+\+ )" -n patch.diff | head -n 50
+
+      - name: Apply patch (verbose)
         shell: bash
         run: |
-          git apply --whitespace=nowarn patch.diff
+          git apply --verbose --whitespace=nowarn patch.diff
 
-      - name: Show git status
-        run: git status --porcelain
+      - name: Git status
+        run: |
+          git status --porcelain
+          git diff --stat
 
       - name: Create Pull Request (single fixed PR)
         uses: peter-evans/create-pull-request@v6
