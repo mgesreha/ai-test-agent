@@ -65,10 +65,10 @@ jobs:
           echo "File(1) info:"
           file patch.diff || true
 
-      - name: Apply patch
+      - name: Apply patch (recount)
         shell: bash
         run: |
-          git apply --verbose --whitespace=nowarn --unidiff-zero patch.diff
+          git apply --verbose --whitespace=nowarn --recount --unidiff-zero patch.diff
 
       - name: Git status
         run: |
