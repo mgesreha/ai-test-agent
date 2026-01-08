@@ -33,14 +33,8 @@ jobs:
           PATCH_B64: ${{ inputs.patchDiff_ui_b64 }}
         run: |
           echo "$PATCH_B64" | base64 --decode > patch.diff
-
-          # Ensure LF newlines (remove CR if any)
           sed -i 's/\r$//' patch.diff
-
-          # Remove problematic marker line if present
           sed -i '/^\\ No newline at end of file$/d' patch.diff || true
-
-          # Ensure patch ends with a newline
           if [ -n "$(tail -c 1 patch.diff | tr -d '\n')" ]; then
             echo >> patch.diff
           fi
@@ -62,7 +56,6 @@ jobs:
           wc -l patch.diff
           echo "diff --git headers:"
           grep -n '^diff --git ' patch.diff | head -n 30 || true
-          echo "File(1) info:"
           file patch.diff || true
 
       - name: Apply patch (recount)
@@ -75,7 +68,7 @@ jobs:
           git status --porcelain
           git diff --stat
 
-      - name: Create Pull Request (single fixed PR)
+      - name: Create Pull Request (new PR each run)
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
