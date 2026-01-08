@@ -1,0 +1,136 @@
+diff --git a/src/main/java/platform/pages/LoginPage.java b/src/main/java/platform/pages/LoginPage.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/platform/pages/LoginPage.java
+@@ -0,0 +1,67 @@
++package platform.pages;
++
++import com.microsoft.playwright.Locator;
++import com.microsoft.playwright.Page;
++
++public class LoginPage {
++
++    private final Page page;
++    private final String baseUrl;
++
++    private final Locator usernameInput;
++    private final Locator passwordInput;
++    private final Locator loginButton;
++    private final Locator errorMessage;
++    private final Locator successMessage;
++
++    public LoginPage(Page page) {
++        this.page = page;
++        this.baseUrl = "https://the-internet.herokuapp.com";
++
++        this.usernameInput = page.locator("#username");
++        this.passwordInput = page.locator("#password");
++        this.loginButton = page.locator("button[type='submit']");
++        this.errorMessage = page.locator("#flash.error");
++        this.successMessage = page.locator("#flash.success");
++    }
++
++    public LoginPage navigate() {
++        page.navigate(baseUrl + "/login");
++        return this;
++    }
++
++    public LoginPage enterUsername(String username) {
++        usernameInput.fill(username);
++        return this;
++    }
++
++    public LoginPage enterPassword(String password) {
++        passwordInput.fill(password);
++        return this;
++    }
++
++    public LoginPage clickLoginButton() {
++        loginButton.click();
++        return this;
++    }
++
++    public LoginPage login(String username, String password) {
++        enterUsername(username);
++        enterPassword(password);
++        clickLoginButton();
++        return this;
++    }
++
++    public Locator getErrorMessage() {
++        return errorMessage;
++    }
++
++    public Locator getSuccessMessage() {
++        return successMessage;
++    }
++
++    public Page getPage() {
++        return page;
++    }
++}
+diff --git a/src/test/java/platform/loginpage/LoginTest.java b/src/test/java/platform/loginpage/LoginTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/platform/loginpage/LoginTest.java
+@@ -0,0 +1,52 @@
++package platform.loginpage;
++
++import io.qameta.allure.Description;
++import io.qameta.allure.Feature;
++import io.qameta.allure.Story;
++import org.testng.Assert;
++import org.testng.annotations.Test;
++import platform.InitTest;
++import platform.pages.LoginPage;
++
++@Feature("Login")
++public class LoginTest extends InitTest {
++
++    private static final String VALID_USERNAME = "tomsmith";
++    private static final String VALID_PASSWORD = "SuperSecretPassword!";
++    private static final String INVALID_USERNAME = "invalidUser";
++    private static final String INVALID_PASSWORD = "invalidPassword";
++
++    @Test
++    @Story("User Login")
++    @Description("Verify that a user can successfully log in with valid credentials")
++    public void testSuccessfulLogin() {
++        LoginPage loginPage = new LoginPage(getPage());
++        loginPage.navigate()
++                .login(VALID_USERNAME, VALID_PASSWORD);
++
++        Assert.assertTrue(loginPage.getSuccessMessage().isVisible(),
++                "Success message should be displayed after successful login");
++        Assert.assertTrue(loginPage.getSuccessMessage().textContent().contains("You logged into a secure area!"),
++                "Success message should contain expected text");
++    }
++
++    @Test
++    @Story("User Login")
++    @Description("Verify that an error message is displayed when logging in with invalid credentials")
++    public void testLoginWithInvalidCredentials() {
++        LoginPage loginPage = new LoginPage(getPage());
++        loginPage.navigate()
++                .login(INVALID_USERNAME, INVALID_PASSWORD);
++
++        Assert.assertTrue(loginPage.getErrorMessage().isVisible(),
++                "Error message should be displayed for invalid credentials");
++        Assert.assertTrue(loginPage.getErrorMessage().textContent().contains("Your username is invalid!"),
++                "Error message should indicate invalid username");
++    }
++
++    @Test
++    @Story("User Login")
++    @Description("Verify that an error message is displayed when logging in with invalid password")
++    public void testLoginWithInvalidPassword() {
++        LoginPage loginPage = new LoginPage(getPage());
++        loginPage.navigate()
++                .login(VALID_USERNAME, INVALID_PASSWORD);
++
++        Assert.assertTrue(loginPage.getErrorMessage().isVisible(),
++                "Error message should be displayed for invalid password");
++        Assert.assertTrue(loginPage.getErrorMessage().textContent().contains("Your password is invalid!"),
++                "Error message should indicate invalid password");
++    }
++}
