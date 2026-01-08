@@ -1,0 +1,52 @@
+name: Apply UI Patch and Open PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      patchDiff_ui:
+        description: "Unified diff patch for UI (POM + Tests)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply_patch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Write patch to file
+        shell: bash
+        run: |
+          cat > patch.diff <<'PATCH_EOF'
+          ${{ inputs.patchDiff_ui }}
+          PATCH_EOF
+
+      - name: Apply patch
+        shell: bash
+        run: |
+          git apply --whitespace=nowarn patch.diff
+
+      - name: Show git status
+        run: git status --porcelain
+
+      - name: Create Pull Request (single fixed PR)
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ai/ui-patch
+          base: main
+          title: "AI: UI POM + Tests patch"
+          body: |
+            This PR applies an AI-generated unified diff patch for UI automation:
+            - Page Object Model updates
+            - UI tests updates
+          commit-message: "AI: apply UI patch"
+          delete-branch: false
