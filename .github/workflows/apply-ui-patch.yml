@@ -34,27 +34,40 @@ jobs:
           ${{ inputs.patchDiff_ui }}
           PATCH_EOF
 
-      - name: Debug patch head
+      - name: Debug patch overview
+        shell: bash
         run: |
           echo "Patch head:"
           head -n 80 patch.diff
-          echo "Patch files (diff --git):"
-          grep -n '^diff --git ' patch.diff | head -n 50
-          echo "Patch files (---/+++):"
-          grep -E "^(--- |\+\+\+ )" -n patch.diff | head -n 80
-          echo "Patch size:"
+          echo "Patch size (lines):"
           wc -l patch.diff
+          echo "diff --git headers:"
+          grep -n '^diff --git ' patch.diff | head -n 50
+          echo "---/+++ headers:"
+          grep -E "^(--- |\+\+\+ )" -n patch.diff | head -n 80
+          echo "File(1) info:"
+          file patch.diff || true
 
-      - name: Sanitize patch
+      - name: Sanitize patch (LF + newline + remove marker)
         shell: bash
         run: |
-          # Remove problematic marker line if present
-          sed -i '/^\\ No newline at end of file$/d' patch.diff
+          # 1) remove problematic marker line if present
+          sed -i '/^\\ No newline at end of file$/d' patch.diff || true
+
+          # 2) normalize CRLF -> LF (remove trailing \r)
+          sed -i 's/\r$//' patch.diff
+
+          # 3) ensure patch ends with a newline
+          if [ -n "$(tail -c 1 patch.diff | tr -d '\n')" ]; then
+            echo >> patch.diff
+          fi
+
+          # 4) add a blank line before each subsequent diff --git (safe formatting)
+          perl -0777 -i -pe 's/\n(diff --git)/\n\n$1/gm' patch.diff
 
       - name: Apply patch (tolerant)
         shell: bash
         run: |
-          # Tolerant apply to reduce strict parsing failures
           git apply --verbose --whitespace=nowarn --unidiff-zero patch.diff
 
       - name: Git status
