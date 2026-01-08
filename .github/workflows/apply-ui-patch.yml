@@ -3,8 +3,8 @@ name: Apply UI Patch and Open PR
 on:
   workflow_dispatch:
     inputs:
-      patchDiff_ui:
-        description: "Unified diff patch for UI (POM + Tests)"
+      patchDiff_ui_b64:
+        description: "Base64 encoded unified diff patch for UI (POM + Tests)"
         required: true
         type: string
 
@@ -27,31 +27,37 @@ jobs:
           git branch -a
           git rev-parse --abbrev-ref HEAD
 
-      - name: Write patch to file
+      - name: Write patch to file (from base64)
         shell: bash
+        env:
+          PATCH_B64: ${{ inputs.patchDiff_ui_b64 }}
         run: |
-          cat > patch.diff <<'PATCH_EOF'
-          ${{ inputs.patchDiff_ui }}
-          PATCH_EOF
+          echo "$PATCH_B64" | base64 --decode > patch.diff
 
-      - name: Upload patch.diff artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: patch-diff
-          path: patch.diff
-          retention-days: 7
-
-      - name: Sanitize patch (LF + newline + remove marker)
-        shell: bash
-        run: |
-          sed -i '/^\\ No newline at end of file$/d' patch.diff || true
+          # Ensure LF newlines (remove CR if any)
           sed -i 's/\r$//' patch.diff
+
+          # Remove problematic marker line if present
+          sed -i '/^\\ No newline at end of file$/d' patch.diff || true
+
+          # Ensure patch ends with a newline
           if [ -n "$(tail -c 1 patch.diff | tr -d '\n')" ]; then
             echo >> patch.diff
           fi
 
-      - name: Apply patch (tolerant)
+      - name: Debug patch overview
+        shell: bash
+        run: |
+          echo "Patch head:"
+          head -n 40 patch.diff
+          echo "Patch size (lines):"
+          wc -l patch.diff
+          echo "diff --git headers:"
+          grep -n '^diff --git ' patch.diff | head -n 20 || true
+          echo "File(1) info:"
+          file patch.diff || true
+
+      - name: Apply patch
         shell: bash
         run: |
           git apply --verbose --whitespace=nowarn --unidiff-zero patch.diff
@@ -69,7 +75,7 @@ jobs:
           base: main
           title: "AI: UI POM + Tests patch"
           body: |
-            This PR applies an AI-generated unified diff patch for UI automation:
+            This PR applies an AI-generated patch (base64-decoded) for UI automation:
             - Page Object Model updates
             - UI tests updates
           commit-message: "AI: apply UI patch"
